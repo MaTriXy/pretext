@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Chronicle — Winding Contours</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --paper: #f0ede5;
+    --paper-shadow: rgba(77, 54, 31, 0.12);
+    --ink: #11100d;
+    --muted: #625849;
+    --muted-soft: rgba(98, 88, 73, 0.7);
+    --accent: #9c5c2f;
+    --accent-soft: rgba(156, 92, 47, 0.12);
+    --sand-a: #d8a15d;
+    --sand-b: #9b6a3a;
+    --sand-c: #5e3f24;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+  }
+
+  body {
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(210, 187, 142, 0.18), transparent 32%),
+      radial-gradient(circle at bottom right, rgba(153, 106, 58, 0.12), transparent 28%),
+      linear-gradient(180deg, #f4f1ea 0%, #ece7dd 100%);
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  }
+
+  .chrome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    width: min(1360px, calc(100vw - 28px));
+    margin: 0 auto;
+    padding: 18px 0 10px;
+    color: var(--muted);
+    font: 12px/1 "Avenir Next", "Helvetica Neue", Helvetica, sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .chrome-left,
+  .chrome-right {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .menu {
+    width: 30px;
+    height: 22px;
+    position: relative;
+  }
+
+  .menu::before,
+  .menu::after,
+  .menu span {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .menu::before { top: 0; }
+  .menu span { top: 10px; }
+  .menu::after { bottom: 0; }
+
+  .icon {
+    width: 26px;
+    height: 26px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(17, 16, 13, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.28);
+  }
+
+  .icon svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .spread {
+    position: relative;
+    width: min(1360px, calc(100vw - 28px));
+    margin: 0 auto 24px;
+    min-height: 920px;
+    border-radius: 32px;
+    overflow: clip;
+    background:
+      linear-gradient(90deg, rgba(232, 220, 194, 0.55), rgba(240, 237, 229, 0) 26%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.16));
+    box-shadow:
+      0 24px 60px rgba(79, 56, 32, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+
+  .block,
+  .art,
+  .line-stage,
+  .status {
+    position: absolute;
+  }
+
+  .block,
+  .art {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: rise 700ms ease forwards;
+  }
+
+  .title-block { animation-delay: 40ms; }
+  .deck-center { animation-delay: 120ms; }
+  .deck-right { animation-delay: 180ms; }
+  .deck-left { animation-delay: 240ms; }
+  .deck-bottom { animation-delay: 300ms; }
+  .ribbon-art { animation-delay: 160ms; }
+  .blob-art { animation-delay: 260ms; }
+
+  .kicker,
+  .deck,
+  .status {
+    font-family: "Avenir Next", "Helvetica Neue", Helvetica, sans-serif;
+  }
+
+  .title-block {
+    z-index: 4;
+  }
+
+  .kicker {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding: 5px 10px 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(58px, 7vw, 88px);
+    line-height: 0.93;
+    letter-spacing: -0.06em;
+    font-weight: 600;
+  }
+
+  .deck {
+    margin: 0;
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.45;
+    z-index: 4;
+  }
+
+  .deck-center,
+  .deck-right,
+  .deck-bottom {
+    color: var(--muted);
+  }
+
+  .deck strong {
+    display: inline;
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .line-stage {
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .line {
+    position: absolute;
+    white-space: pre;
+    font: 20px/32px "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+    letter-spacing: -0.01em;
+    pointer-events: auto;
+  }
+
+  .line:hover {
+    color: var(--accent);
+  }
+
+  .art {
+    z-index: 3;
+    pointer-events: none;
+    filter: drop-shadow(0 18px 28px rgba(75, 48, 22, 0.18));
+  }
+
+  .art svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .status {
+    left: 24px;
+    right: 24px;
+    bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: center;
+    padding: 12px 16px;
+    border-radius: 18px;
+    background: rgba(255, 252, 246, 0.78);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 24px rgba(63, 40, 18, 0.08);
+    z-index: 6;
+  }
+
+  .status strong {
+    color: var(--ink);
+  }
+
+  .status-meta {
+    color: var(--muted-soft);
+    text-align: right;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .chrome {
+      width: calc(100vw - 22px);
+      padding-top: 14px;
+    }
+
+    .spread {
+      width: calc(100vw - 22px);
+      border-radius: 24px;
+      min-height: 1100px;
+    }
+
+    .status {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .status-meta {
+      text-align: left;
+    }
+  }
+</style>
+</head>
+<body>
+  <header class="chrome">
+    <div class="chrome-left">
+      <div class="menu"><span></span></div>
+      <span>The Chronicle</span>
+    </div>
+    <div class="chrome-right">
+      <span class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      </span>
+      <span class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M6 7h12"></path><path d="M8 7V5.5A3.5 3.5 0 0 1 11.5 2h1A3.5 3.5 0 0 1 16 5.5V7"></path><path d="M5 7h14l-1 13H6z"></path></svg>
+      </span>
+    </div>
+  </header>
+
+  <main class="spread" id="spread">
+    <section class="block title-block" id="title-block">
+      <div class="kicker">Feature Essay</div>
+      <h1>SCENT OF AN IDEA:<br>Winding Contours</h1>
+    </section>
+
+    <p class="block deck deck-center" id="deck-center">
+      <strong>Some pages do not need CSS columns so much as a memory of where the text has already been.</strong>
+      The fun begins when every line can steer around a shape without giving the browser the whole composition back.
+    </p>
+
+    <p class="block deck deck-right" id="deck-right">
+      A layout like this is less about imitation than leverage: one body of text, several live contours, and a surface that can be resized without collapsing into a stack of boxes. The page does not guess where its text went. It knows.
+    </p>
+
+    <p class="block deck deck-left" id="deck-left">
+      The first sketch smelled of cedar, toner, and hot dust from the projector. Someone had dragged a contour across the page, and suddenly the prose no longer wanted to live in obedient rectangles.
+    </p>
+
+    <p class="block deck deck-bottom" id="deck-bottom">
+      Resize the page and the whole field reflows in userland: same text, new anchors, no hidden browser paragraph model to measure back out after the fact.
+    </p>
+
+    <div class="art ribbon-art" id="ribbon-art" aria-hidden="true"></div>
+    <div class="art blob-art" id="blob-art" aria-hidden="true"></div>
+
+    <div class="line-stage" id="line-stage"></div>
+
+    <div class="status">
+      <div><strong>Live userland reflow.</strong> Every body line here is placed by repeated <code>layoutNextLine()</code> calls around fixed copy blocks and procedural artwork.</div>
+      <div class="status-meta" id="status-meta">Resize the window to recompose the field.</div>
+    </div>
+  </main>
+
+  <script type="module" src="./chronicle.ts"></script>
+</body>
+</html>

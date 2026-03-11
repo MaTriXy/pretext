@@ -35,6 +35,7 @@ Internal notes for contributors and agents. Use `README.md` as the public source
 - `pages/columns.ts` — three-column userland reflow demo built from one streamed `layoutNextLine()` pass
 - `pages/contour.ts` — variable-width contour demo built by advancing with `layoutNextLine()`
 - `pages/editorial.ts` — anchored-shape editorial layout demo built from repeated `layoutNextLine()` calls
+- `pages/chronicle.ts` — poster-like editorial spread with procedural contour art and text routed around fixed copy blocks
 - `pages/sync.ts` — synced multi-view reflow demo that maps one pane's scroll anchor onto the others via line-start cursors
 - `pages/line-utils.ts` — browser-demo helper that collects whole line arrays via repeated `layoutNextLine()` calls
 
