@@ -52,6 +52,7 @@ import {
   getFontMeasurementState,
   getSegmentGraphemeWidths,
   getSegmentMetrics,
+  textMayContainEmoji,
 } from './measurement.ts'
 import {
   countPreparedLines,
@@ -162,7 +163,10 @@ function measureAnalysis(
 ): InternalPreparedText | PreparedTextWithSegments {
   const graphemeSegmenter = getSharedGraphemeSegmenter()
   const engineProfile = getEngineProfile()
-  const { cache, emojiCorrection } = getFontMeasurementState(font)
+  const { cache, emojiCorrection } = getFontMeasurementState(
+    font,
+    textMayContainEmoji(analysis.normalized),
+  )
   const discretionaryHyphenWidth = getCorrectedSegmentWidth('-', getSegmentMetrics('-', cache), emojiCorrection)
 
   if (analysis.len === 0) return createEmptyPrepared(includeSegments)

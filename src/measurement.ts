@@ -17,6 +17,7 @@ const segmentMetricCaches = new Map<string, Map<string, SegmentMetrics>>()
 let cachedEngineProfile: EngineProfile | null = null
 
 const emojiPresentationRe = /\p{Emoji_Presentation}/u
+const maybeEmojiRe = /[\p{Emoji_Presentation}\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F\u20E3]/u
 let sharedGraphemeSegmenter: Intl.Segmenter | null = null
 const emojiCorrectionCache = new Map<string, number>()
 
@@ -108,6 +109,10 @@ function isEmojiGrapheme(g: string): boolean {
   return emojiPresentationRe.test(g) || g.includes('\uFE0F')
 }
 
+export function textMayContainEmoji(text: string): boolean {
+  return maybeEmojiRe.test(text)
+}
+
 function getEmojiCorrection(font: string, fontSize: number): number {
   let correction = emojiCorrectionCache.get(font)
   if (correction !== undefined) return correction
@@ -178,7 +183,7 @@ export function getSegmentGraphemeWidths(
   return metrics.graphemeWidths
 }
 
-export function getFontMeasurementState(font: string): {
+export function getFontMeasurementState(font: string, needsEmojiCorrection: boolean): {
   cache: Map<string, SegmentMetrics>
   fontSize: number
   emojiCorrection: number
@@ -187,7 +192,7 @@ export function getFontMeasurementState(font: string): {
   ctx.font = font
   const cache = getSegmentMetricCache(font)
   const fontSize = parseFontSize(font)
-  const emojiCorrection = getEmojiCorrection(font, fontSize)
+  const emojiCorrection = needsEmojiCorrection ? getEmojiCorrection(font, fontSize) : 0
   return { cache, fontSize, emojiCorrection }
 }
 
