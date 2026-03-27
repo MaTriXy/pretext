@@ -3,9 +3,16 @@ import path from 'node:path'
 
 const root = process.cwd()
 const outdir = path.join(root, 'site')
+const entrypoints = [
+  'pages/demos/index.html',
+  'pages/demos/accordion.html',
+  'pages/demos/bubbles.html',
+  'pages/demos/dynamic-layout.html',
+  'pages/demos/masonry/index.html',
+]
 
 const result = Bun.spawnSync(
-  ['/bin/zsh', '-lc', `bun build pages/demos/*.html pages/demos/*/index.html --outdir ${JSON.stringify(outdir)}`],
+  ['bun', 'build', ...entrypoints, '--outdir', outdir],
   {
     cwd: root,
     stdout: 'inherit',
