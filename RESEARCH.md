@@ -172,6 +172,24 @@ CSS `white-space: normal` lets trailing spaces "hang" past the line edge — the
 
 **Fix: when a space segment causes overflow, skip it** (don't break, don't add to lineW). This matches the CSS behavior: trailing spaces hang.
 
+## Discovery: preserving ordinary spaces is viable, but tabs are a separate problem
+
+For editor-style input, the smallest honest second mode was not “stop normalizing everything.” The browser probes were more specific:
+
+- ordinary spaces under preserved wrapping still hang at line end; they do not force the break themselves
+- preserved `\n` should become explicit hard breaks
+- consecutive hard breaks should keep empty lines
+- a trailing hard break should **not** invent an extra empty line
+
+That led to a viable second mode: `{ whiteSpace: 'preserve-spaces' }`, which preserves ordinary spaces and `\n` hard breaks while leaving the default `white-space: normal` path untouched.
+
+One tempting broader claim was rejected. Tabs are **not** solved by the current canvas architecture:
+
+- Chrome DOM `pre-wrap` tab width at default `tab-size: 8`: `35.56px`
+- Chrome canvas `measureText('\\t')`: `4.45px`
+
+So this mode currently normalizes tabs to ordinary spaces rather than pretending it is a full `pre-wrap` clone. That keeps the useful user-input case without quietly shipping a known measurement lie.
+
 ## Discovery: emoji canvas/DOM width discrepancy
 
 Canvas and DOM measure emoji at different widths on macOS (Chrome):

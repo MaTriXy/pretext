@@ -22,8 +22,12 @@ export type InternalLayoutLine = {
   width: number
 }
 
-function isCollapsibleSpaceKind(kind: SegmentBreakKind): boolean {
-  return kind === 'space'
+function isHangingSpaceKind(kind: SegmentBreakKind): boolean {
+  return kind === 'space' || kind === 'preserved-space'
+}
+
+function isHardBreakKind(kind: SegmentBreakKind): boolean {
+  return kind === 'hard-break'
 }
 
 function getBreakableAdvance(
@@ -131,6 +135,16 @@ export function countPreparedLines(prepared: PreparedLineBreakData, maxWidth: nu
     const w = widths[i]!
     const kind = kinds[i]!
 
+    if (isHardBreakKind(kind)) {
+      if (hasContent) {
+        lineW = 0
+        hasContent = false
+      } else {
+        lineCount++
+      }
+      continue
+    }
+
     if (!hasContent) {
       placeOnFreshLine(i)
       continue
@@ -139,7 +153,9 @@ export function countPreparedLines(prepared: PreparedLineBreakData, maxWidth: nu
     const newW = lineW + w
 
     if (newW > maxWidth + lineFitEpsilon) {
-      if (isCollapsibleSpaceKind(kind)) {
+      if (isHangingSpaceKind(kind)) {
+        lineW = 0
+        hasContent = false
         continue
       }
       lineW = 0
@@ -148,10 +164,6 @@ export function countPreparedLines(prepared: PreparedLineBreakData, maxWidth: nu
     } else {
       lineW = newW
     }
-  }
-
-  if (!hasContent) {
-    lineCount++
   }
 
   return lineCount
@@ -305,6 +317,23 @@ export function walkPreparedLines(
     const w = widths[i]!
     const kind = kinds[i]!
 
+    if (isHardBreakKind(kind)) {
+      if (hasContent) {
+        emitCurrentLine(i + 1, 0, lineW)
+      } else {
+        lineCount++
+        onLine?.({
+          startSegmentIndex: i,
+          startGraphemeIndex: 0,
+          endSegmentIndex: i + 1,
+          endGraphemeIndex: 0,
+          width: 0,
+        })
+        clearPendingSoftBreak()
+      }
+      continue
+    }
+
     if (kind === 'soft-hyphen') {
       if (hasContent) {
         lineEndSegmentIndex = i + 1
@@ -330,8 +359,9 @@ export function walkPreparedLines(
     const newW = lineW + w
 
     if (newW > maxWidth + lineFitEpsilon) {
-      if (isCollapsibleSpaceKind(kind)) {
-        clearPendingSoftBreak()
+      if (isHangingSpaceKind(kind)) {
+        appendWholeSegment(i, w)
+        emitCurrentLine()
         continue
       }
 
@@ -536,6 +566,19 @@ export function layoutNextLineRange(
     const kind = kinds[i]!
     const startGraphemeIndex = i === normalizedStart.segmentIndex ? normalizedStart.graphemeIndex : 0
 
+    if (isHardBreakKind(kind) && startGraphemeIndex === 0) {
+      if (!hasContent) {
+        return {
+          startSegmentIndex: i,
+          startGraphemeIndex: 0,
+          endSegmentIndex: i + 1,
+          endGraphemeIndex: 0,
+          width: 0,
+        }
+      }
+      return finishLine(i + 1, 0, lineW)
+    }
+
     if (kind === 'soft-hyphen' && startGraphemeIndex === 0) {
       if (hasContent) {
         lineEndSegmentIndex = i + 1
@@ -564,9 +607,9 @@ export function layoutNextLineRange(
 
     const newW = lineW + w
     if (newW > maxWidth + lineFitEpsilon) {
-      if (isCollapsibleSpaceKind(kind)) {
-        clearPendingSoftBreak()
-        continue
+      if (isHangingSpaceKind(kind)) {
+        appendWholeSegment(i, w)
+        return finishLine()
       }
 
       if (

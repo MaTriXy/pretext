@@ -49,7 +49,7 @@ Internal notes for contributors and agents. Use `README.md` as the public source
 - `prepare()` should stay the opaque fast-path handle. If a page/script needs segment arrays, that should usually flow through `prepareWithSegments()` instead of re-exposing internals on the main prepared type.
 - `walkLineRanges()` is the rich-path batch geometry API: no string materialization, but still browser-like line widths/cursors/discretionary-hyphen state. Prefer it over private line walkers for shrinkwrap or aggregate layout work.
 - `prepare()` is internally split into a text-analysis phase and a measurement phase; keep that seam clear, but keep the public API simple unless requirements force a change.
-- The internal segment model now distinguishes at least five break kinds: normal text, collapsible spaces, non-breaking glue (`NBSP` / `NNBSP` / `WJ`-like runs), zero-width break opportunities, and soft hyphens. Do not collapse those back into one boolean unless the model gets richer in a better way.
+- The internal segment model now distinguishes at least seven break kinds: normal text, collapsible spaces, preserved spaces, non-breaking glue (`NBSP` / `NNBSP` / `WJ`-like runs), zero-width break opportunities, soft hyphens, and hard breaks. Do not collapse those back into one boolean unless the model gets richer in a better way.
 - `layout()` is the resize hot path: no DOM reads, no canvas calls, no string work, and avoid gratuitous allocations.
 - Segment metrics cache is `Map<font, Map<segment, metrics>>`; shared across texts and resettable via `clearCache()`. Width is only one cached fact now; grapheme widths and other segment-derived facts can be populated lazily.
 - Word and grapheme segmenters are hoisted at module scope. Any locale reset should also clear the word cache.
@@ -68,7 +68,8 @@ Internal notes for contributors and agents. Use `README.md` as the public source
 - Emoji correction is auto-detected per font size, constant per emoji grapheme, and effectively font-independent.
 - Bidi levels now stay on the rich `prepareWithSegments()` path as custom-rendering metadata only. The opaque fast `prepare()` handle should not pay for bidi metadata that `layout()` does not consume, and line breaking itself does not read those levels.
 - A larger pure-TS Unicode stack like `text-shaper` is useful as reference material, especially for Unicode coverage and richer bidi metadata, but its runtime segmentation and greedy glyph-line breaker are not replacements for our browser-facing `Intl.Segmenter` + preprocessing + canvas-measurement model.
-- Supported CSS target is the common app-text configuration: `white-space: normal`, `word-break: normal`, `overflow-wrap: break-word`, `line-break: auto`.
+- Supported CSS target is still the common app-text configuration: `white-space: normal`, `word-break: normal`, `overflow-wrap: break-word`, `line-break: auto`.
+- There is now a second explicit whitespace mode, `{ whiteSpace: 'preserve-spaces' }`, for ordinary spaces plus `\n` hard breaks. Treat it as editor/input-oriented, not a full tab-accurate `pre-wrap` clone.
 - That default target means narrow widths may still break inside words, but only at grapheme boundaries. Keep the core engine honest to that behavior; if an editorial page wants stricter whole-word handling, layer it on top in userland instead of quietly changing the library default.
 - `system-ui` is unsafe for accuracy; canvas and DOM can resolve different fonts on macOS.
 - Thai historically mismatched because CSS and `Intl.Segmenter` use different internal dictionaries; keep it in the browser sweep when changing segmentation rules.
@@ -126,7 +127,7 @@ Internal notes for contributors and agents. Use `README.md` as the public source
 - The browser demos should increasingly dogfood `layoutNextLine()` rather than depending on `layoutWithLines()` for whole-paragraph materialization. That keeps the streaming userland path honest.
 - ASCII fast path could skip some CJK, bidi, and emoji overhead.
 - Benchmark methodology still needs review.
-- Additional CSS configs are still untested: `break-all`, `keep-all`, `strict`, `loose`, `anywhere`, `pre-wrap`.
+- Additional CSS configs are still untested: `break-all`, `keep-all`, `strict`, `loose`, `anywhere`.
 
 ### Related
 

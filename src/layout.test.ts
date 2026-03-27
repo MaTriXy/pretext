@@ -123,6 +123,24 @@ describe('prepare invariants', () => {
     expect(prepared.segments).toEqual(['Hello', ' ', 'World'])
   })
 
+  test('preserve-spaces mode keeps ordinary spaces instead of collapsing them', () => {
+    const prepared = prepareWithSegments('  Hello   World  ', FONT, { whiteSpace: 'preserve-spaces' })
+    expect(prepared.segments).toEqual(['  ', 'Hello', '   ', 'World', '  '])
+    expect(prepared.kinds).toEqual(['preserved-space', 'text', 'preserved-space', 'text', 'preserved-space'])
+  })
+
+  test('preserve-spaces mode keeps hard breaks as explicit segments', () => {
+    const prepared = prepareWithSegments('Hello\nWorld', FONT, { whiteSpace: 'preserve-spaces' })
+    expect(prepared.segments).toEqual(['Hello', '\n', 'World'])
+    expect(prepared.kinds).toEqual(['text', 'hard-break', 'text'])
+  })
+
+  test('preserve-spaces mode normalizes tabs to ordinary spaces for now', () => {
+    const prepared = prepareWithSegments('Hello\tWorld', FONT, { whiteSpace: 'preserve-spaces' })
+    expect(prepared.segments).toEqual(['Hello', ' ', 'World'])
+    expect(prepared.kinds).toEqual(['text', 'preserved-space', 'text'])
+  })
+
   test('keeps non-breaking spaces as glue instead of collapsing them away', () => {
     const prepared = prepareWithSegments('Hello\u00A0world', FONT)
     expect(prepared.segments).toEqual(['Hello\u00A0world'])
@@ -132,6 +150,11 @@ describe('prepare invariants', () => {
   test('keeps standalone non-breaking spaces as visible glue content', () => {
     const prepared = prepareWithSegments('\u00A0', FONT)
     expect(prepared.segments).toEqual(['\u00A0'])
+    expect(layout(prepared, 200, LINE_HEIGHT)).toEqual({ lineCount: 1, height: LINE_HEIGHT })
+  })
+
+  test('preserve-spaces mode keeps whitespace-only input visible', () => {
+    const prepared = prepare('   ', FONT, { whiteSpace: 'preserve-spaces' })
     expect(layout(prepared, 200, LINE_HEIGHT)).toEqual({ lineCount: 1, height: LINE_HEIGHT })
   })
 
@@ -421,6 +444,36 @@ describe('layout invariants', () => {
     }
 
     expect(actual).toEqual(expected.lines)
+  })
+
+  test('preserve-spaces mode keeps hanging spaces visible at line end', () => {
+    const prepared = prepareWithSegments('foo   bar', FONT, { whiteSpace: 'preserve-spaces' })
+    const width = measureWidth('foo', FONT) + 0.1
+    const lines = layoutWithLines(prepared, width, LINE_HEIGHT)
+    expect(lines.lineCount).toBe(2)
+    expect(lines.lines.map(line => line.text)).toEqual(['foo   ', 'bar'])
+    expect(layout(prepared, width, LINE_HEIGHT).lineCount).toBe(2)
+  })
+
+  test('preserve-spaces mode treats hard breaks as forced line boundaries', () => {
+    const prepared = prepareWithSegments('a\nb', FONT, { whiteSpace: 'preserve-spaces' })
+    const lines = layoutWithLines(prepared, 200, LINE_HEIGHT)
+    expect(lines.lines.map(line => line.text)).toEqual(['a', 'b'])
+    expect(layout(prepared, 200, LINE_HEIGHT).lineCount).toBe(2)
+  })
+
+  test('preserve-spaces mode keeps empty lines from consecutive hard breaks', () => {
+    const prepared = prepareWithSegments('\n\n', FONT, { whiteSpace: 'preserve-spaces' })
+    const lines = layoutWithLines(prepared, 200, LINE_HEIGHT)
+    expect(lines.lines.map(line => line.text)).toEqual(['', ''])
+    expect(layout(prepared, 200, LINE_HEIGHT)).toEqual({ lineCount: 2, height: LINE_HEIGHT * 2 })
+  })
+
+  test('preserve-spaces mode does not invent an extra trailing empty line', () => {
+    const prepared = prepareWithSegments('a\n', FONT, { whiteSpace: 'preserve-spaces' })
+    const lines = layoutWithLines(prepared, 200, LINE_HEIGHT)
+    expect(lines.lines.map(line => line.text)).toEqual(['a'])
+    expect(layout(prepared, 200, LINE_HEIGHT)).toEqual({ lineCount: 1, height: LINE_HEIGHT })
   })
 
   test('overlong breakable segments wrap onto a fresh line when the current line already has content', () => {

@@ -44,6 +44,7 @@ import {
   setAnalysisLocale,
   type SegmentBreakKind,
   type TextAnalysis,
+  type WhiteSpaceMode,
 } from './analysis.ts'
 import {
   clearMeasurementCaches,
@@ -137,6 +138,10 @@ export type PrepareProfile = {
   breakableSegments: number
 }
 
+export type PrepareOptions = {
+  whiteSpace?: WhiteSpaceMode
+}
+
 // --- Public API ---
 
 function createEmptyPrepared(includeSegments: boolean): InternalPreparedText | PreparedTextWithSegments {
@@ -205,7 +210,7 @@ function measureAnalysis(
     const segKind = analysis.kinds[mi]!
     const segStart = analysis.starts[mi]!
 
-    if (segKind === 'soft-hyphen') {
+    if (segKind === 'soft-hyphen' || segKind === 'hard-break') {
       pushMeasuredSegment(segText, 0, segKind, segStart, null, null)
       continue
     }
@@ -271,16 +276,21 @@ function measureAnalysis(
   return { widths, kinds, segLevels, breakableWidths, breakablePrefixWidths, discretionaryHyphenWidth } as unknown as InternalPreparedText
 }
 
-function prepareInternal(text: string, font: string, includeSegments: boolean): InternalPreparedText | PreparedTextWithSegments {
-  const analysis = analyzeText(text, getEngineProfile())
+function prepareInternal(
+  text: string,
+  font: string,
+  includeSegments: boolean,
+  options?: PrepareOptions,
+): InternalPreparedText | PreparedTextWithSegments {
+  const analysis = analyzeText(text, getEngineProfile(), options?.whiteSpace)
   return measureAnalysis(analysis, font, includeSegments)
 }
 
 // Diagnostic-only helper used by the browser benchmark harness to separate the
 // text-analysis and measurement phases without duplicating the prepare logic.
-export function profilePrepare(text: string, font: string): PrepareProfile {
+export function profilePrepare(text: string, font: string, options?: PrepareOptions): PrepareProfile {
   const t0 = performance.now()
-  const analysis = analyzeText(text, getEngineProfile())
+  const analysis = analyzeText(text, getEngineProfile(), options?.whiteSpace)
   const t1 = performance.now()
   const prepared = measureAnalysis(analysis, font, false) as InternalPreparedText
   const t2 = performance.now()
@@ -314,14 +324,14 @@ export function profilePrepare(text: string, font: string): PrepareProfile {
 //   6. Pre-measure graphemes of long words (for overflow-wrap: break-word)
 //   7. Correct emoji canvas inflation (auto-detected per font size)
 //   8. Optionally compute rich-path bidi metadata for custom renderers
-export function prepare(text: string, font: string): PreparedText {
-  return prepareInternal(text, font, false) as PreparedText
+export function prepare(text: string, font: string, options?: PrepareOptions): PreparedText {
+  return prepareInternal(text, font, false, options) as PreparedText
 }
 
 // Rich variant used by callers that need enough information to render the
 // laid-out lines themselves.
-export function prepareWithSegments(text: string, font: string): PreparedTextWithSegments {
-  return prepareInternal(text, font, true) as PreparedTextWithSegments
+export function prepareWithSegments(text: string, font: string, options?: PrepareOptions): PreparedTextWithSegments {
+  return prepareInternal(text, font, true, options) as PreparedTextWithSegments
 }
 
 function getInternalPrepared(prepared: PreparedText): InternalPreparedText {
@@ -402,7 +412,7 @@ function buildLineTextFromRange(
   )
 
   for (let i = startSegmentIndex; i < endSegmentIndex; i++) {
-    if (kinds[i] === 'soft-hyphen') continue
+    if (kinds[i] === 'soft-hyphen' || kinds[i] === 'hard-break') continue
     if (i === startSegmentIndex && startGraphemeIndex > 0) {
       text += getSegmentGraphemes(i, segments, cache).slice(startGraphemeIndex).join('')
     } else {
